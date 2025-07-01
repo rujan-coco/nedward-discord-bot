@@ -43,19 +43,21 @@ async def on_message(message):
 
 @bot.command()
 async def player_stats(ctx, player_tag: str):
+  if not player_tag.startswith("#"):
+    player_tag = f"#{player_tag}"
+
   encoded_player_tag = urllib.parse.quote(player_tag)
   res = requests.get(f"https://api.clashofclans.com/v1/players/{encoded_player_tag}", headers={"Authorization": f"Bearer {COC_API_TOKEN}"})
 
   # TODO: There has to be a better way to do this.  
-  hero_levels = []
-  for key, value in res.json().items():
-    if key == "heroes":
-      for hero in value:
-        hero_levels.append(hero["level"])
+  heroes = '\n'.join([f"- {hero['name']}: {hero['level']}/{hero['maxLevel']}" for hero in res.json()["heroes"]])
 
-  average_hero_level = sum(hero_levels) / len(hero_levels)
+  await ctx.send(f"""
+Hello {ctx.author.mention}! 👋. Here are some stats you may be interested in:
 
-  await ctx.send(f"Hello {ctx.author.mention}! 👋 Your average hero level is {int(average_hero_level)}.")
+**Hero Levels:**
+{heroes}
+  """)
 
 # Run Bot
 bot.run(DISCORD_BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)

@@ -59,5 +59,41 @@ Hello {ctx.author.mention}! 👋. Here are some stats you may be interested in:
 {heroes}
   """)
 
+@bot.command()
+async def raid(ctx):
+  encoded_clan_tag = urllib.parse.quote("#2LJ80LRCR")
+
+  res = requests.get(
+    f"https://api.clashofclans.com/v1/clans/{encoded_clan_tag}/capitalraidseasons", 
+    params={
+      "limit": 3,
+    },
+    headers={"Authorization": f"Bearer {COC_API_TOKEN}"}
+  )
+
+  raids = res.json()["items"]
+
+  all_raid_members = [raid.get("members", []) for raid in raids]
+
+  flattened_all_raid_members = [member for raid_members in all_raid_members for member in raid_members]
+
+  print(flattened_all_raid_members)
+
+  total_looted_medals_per_member = {}
+
+  for member in flattened_all_raid_members:
+    name = member["name"]
+    looted = member["capitalResourcesLooted"]
+
+    total_looted_medals_per_member[name] = total_looted_medals_per_member.get(name, 0) + looted
+
+  sorted_loot_data = dict(sorted(total_looted_medals_per_member.items(), key=lambda x:x[1], reverse=True))
+
+  loot_data_str = "\n".join([f"- {key}: {value}" for key, value in sorted_loot_data.items()])
+  await ctx.send(f"""
+**Total looted medals per member in the last 3 raids:**
+{loot_data_str}
+  """)
+
 # Run Bot
 bot.run(DISCORD_BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)

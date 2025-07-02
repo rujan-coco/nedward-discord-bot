@@ -8,6 +8,7 @@ import urllib.parse
 import random
 import re
 from get_cwl_lineups import get_cwl_lineups
+from random_facts import get_donations_fact
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,7 +16,7 @@ DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 COC_API_TOKEN = os.getenv("COC_API_TOKEN")
 
 # Logging
-handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
+# handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 
 # Define Intents
 intents = discord.Intents.default()
@@ -131,5 +132,25 @@ async def opponent_lineup(ctx):
 {lineup_str}
   """)
 
+FACT_TYPE_SELECTOR_MAP = {
+  "DONATIONS": get_donations_fact,
+}
+
+@bot.command()
+async def random_fact(ctx):
+  FACT_TYPES = [
+    "DONATIONS",
+  ]
+  random_fact_type = random.choice(FACT_TYPES)
+
+  fact = FACT_TYPE_SELECTOR_MAP[random_fact_type]()
+
+  await ctx.send(f"""
+**Sure, here is a random fact about the clan:**
+{fact}
+""")
+
+
 # Run Bot
-bot.run(DISCORD_BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)
+# bot.run(DISCORD_BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)
+bot.run(DISCORD_BOT_TOKEN, log_level=logging.DEBUG)

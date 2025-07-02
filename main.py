@@ -123,7 +123,7 @@ async def opponent_lineup(ctx):
   
   clan_name, members = get_cwl_lineups()
 
-  lineup_str = "\n".join([f"- {member['mapPosition']} - {member['name']} (TH{member['townhallLevel']})" for member in members])
+  lineup_str = "\n".join([f"- {i + 1} - {member['name']} (TH{member['townhallLevel']})" for i, member in enumerate(members)])
 
   await ctx.send(f"""
 **{clan_name} lineup:**

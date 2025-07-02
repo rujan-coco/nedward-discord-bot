@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 import os
 import requests
 import urllib.parse
+import random
+import re
+from get_cwl_lineups import get_cwl_lineups
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,6 +41,13 @@ async def on_message(message):
   if "oliver the goat" in  message.content.lower():
     await message.delete()
     await message.channel.send(f"{message.author.mention} - You can't spread lies in this server!")
+
+  match = re.match(r"bot how many times has (.+?) gooned this week\?", message.content.lower())
+  if match:
+      name = match.group(1).strip()
+      times = random.randint(0, 20)  # You can change the range if you want
+      await message.channel.send(f"{message.author.mention} - {name.title()} has gooned {times} times this week.")
+      return
   
   await bot.process_commands(message)
 
@@ -93,6 +103,32 @@ async def raid(ctx):
   await ctx.send(f"""
 **Total looted medals per member in the last 3 raids:**
 {loot_data_str}
+  """)
+
+@bot.command()
+async def opponent_lineup(ctx):
+  encoded_clan_tag = urllib.parse.quote("#2LJ80LRCR")
+  res = requests.get(
+    f"https://api.clashofclans.com/v1/clans/{encoded_clan_tag}/currentwar/leaguegroup", 
+    params={
+      "limit": 3,
+    },
+    headers={"Authorization": f"Bearer {COC_API_TOKEN}"}
+  )
+
+  valid_rounds = [
+    d for d in res.json()["rounds"] 
+    if not (isinstance(d.get("warTags"), list) and all(tag == "#0" for tag in d["warTags"]))
+  ]
+  
+  clan_name, members = get_cwl_lineups()
+
+  lineup_str = "\n".join([f"- {member['mapPosition']} - {member['name']} (TH{member['townhallLevel']})" for member in members])
+
+  await ctx.send(f"""
+**{clan_name} lineup:**
+
+{lineup_str}
   """)
 
 # Run Bot

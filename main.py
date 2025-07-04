@@ -32,7 +32,8 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
-  await member.send(f"Welcome to the server, Chief {member.name}! 🫡")
+  welcome_channel = discord.utils.get(member.guild.text_channels, name='welcome')
+  await welcome_channel.send(f"Welcome to the server, Chief {member.mention}! 🫡")
 
 @bot.event
 async def on_message(message):

@@ -11,9 +11,6 @@ def get_cwl_lineups():
   encoded_clan_tag = urllib.parse.quote("#2LJ80LRCR")
   res = requests.get(
     f"https://api.clashofclans.com/v1/clans/{encoded_clan_tag}/currentwar/leaguegroup", 
-    params={
-      "limit": 3,
-    },
     headers={"Authorization": f"Bearer {COC_API_TOKEN}"}
   )
 

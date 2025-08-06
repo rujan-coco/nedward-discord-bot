@@ -9,6 +9,8 @@ import random
 import re
 from get_cwl_lineups import get_cwl_lineups
 from random_facts import get_donations_fact
+import json
+from data_selectors import players as players_selector
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,6 +30,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
+  await bot.wait_until_ready()
+  await bot.tree.sync()
   print(f"Bot {bot.user.name} is ready!")
 
 @bot.event
@@ -220,7 +224,93 @@ async def random_fact(ctx):
 **Sure, here is a random fact about the clan:**
 {fact}
 """)
+  
+@bot.command()
+async def player_tag(ctx, tag: str):
+    folder_path = "./data"
+    file_path = os.path.join(folder_path, "players.json")
+    user_id = ctx.author.id
 
+    # Ensure the folder exists
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Ensure the file exists
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as f:
+            json.dump([], f)
+
+    # Load existing data
+    with open(file_path, "r") as f:
+        tags = json.load(f)
+
+    # Check if user already exists in the list
+    found = False
+    for entry in tags:
+        if entry["user_id"] == user_id:
+            entry["player_tag"] = tag  # update tag
+            found = True
+            break
+
+    if not found:
+        # Add new entry
+        tags.append({
+            "user_id": user_id,
+            "player_tag": tag
+        })
+
+    # Save back to file
+    with open(file_path, "w") as f:
+        json.dump(tags, f, indent=2)
+
+    await ctx.reply(f"Your tag has been {'updated' if found else 'saved'}: `{tag}`", mention_author=True)
+
+@bot.command()
+async def my_stats(ctx):
+  player = players_selector.get_player_by_user_id(ctx.author.id)
+
+  if not player:
+    await ctx.reply("I don't have your data. Please use `!player_tag <tag>` to get started.")
+    return
+  
+  player_tag = player.player_tag
+
+  if not player_tag:
+    await ctx.reply("You don't have a player tag saved. Please use `!player_tag <tag>` to save one.")
+
+  if not player_tag.startswith("#"):
+    player_tag = f"#{player_tag}"
+
+  encoded_player_tag = urllib.parse.quote(player_tag)
+  res = requests.get(f"https://api.clashofclans.com/v1/players/{encoded_player_tag}", headers={"Authorization": f"Bearer {COC_API_TOKEN}"})
+
+  if not res.ok:
+    await ctx.reply("""
+❌ There was an error fetching the player stats.
+Some possible reasons:
+- The player tag is invalid.
+- funky's IP address got blocked by SuperCell (RIP).
+""")
+    return
+
+  # TODO: There has to be a better way to do this.  
+  heroes = '\n'.join([f"- {hero['name']}: {hero['level']}/{hero['maxLevel']}" for hero in res.json()["heroes"]])
+
+  await ctx.send(f"""
+Hello {ctx.author.mention}! 👋. Here are some stats you may be interested in:
+
+**Hero Levels:**
+{heroes}
+  """)
+
+@bot.command()
+async def me(ctx):
+  player = players_selector.get_player_by_user_id(ctx.author.id)
+
+  if not player:
+    await ctx.reply("You don't have a player tag saved. Please use `!player_tag <tag>` to save one.")
+    return
+
+  await ctx.reply(f"Your player tag is `{player.player_tag}`")
 
 # Run Bot
 # bot.run(DISCORD_BOT_TOKEN, log_handler=handler, log_level=logging.DEBUG)

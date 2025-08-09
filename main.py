@@ -11,6 +11,7 @@ from get_cwl_lineups import get_cwl_lineups
 from random_facts import get_donations_fact
 import json
 from data_selectors import players as players_selector
+from integrations import clash_of_clans as coc
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,6 +42,25 @@ async def on_member_join(member):
 
 def generate_fake_ip():
     return ".".join(str(random.randint(0, 255)) for _ in range(4))
+
+async def send_long_text(ctx, text):
+    MAX_LENGTH = 2000
+    if len(text) <= MAX_LENGTH:
+        await ctx.reply(text)
+    else:
+        chunks = []
+        while len(text) > 0:
+            if len(text) > MAX_LENGTH:
+                # Try to split on a newline before max length for cleaner split
+                split_index = text.rfind("\n", 0, MAX_LENGTH)
+                if split_index == -1:
+                    split_index = MAX_LENGTH
+                chunk, text = text[:split_index], text[split_index:]
+            else:
+                chunk, text = text, ""
+            chunks.append(chunk.strip())
+        for chunk in chunks:
+            await ctx.send(chunk)
 
 funny_song_titles = [
     "Peppa Pig Intro (Nightcore Version)",
@@ -111,13 +131,9 @@ async def on_message(message):
 
 @bot.command()
 async def player_stats(ctx, player_tag: str):
-  if not player_tag.startswith("#"):
-    player_tag = f"#{player_tag}"
+  player_stats = coc.get_player_stats(player_tag)
 
-  encoded_player_tag = urllib.parse.quote(player_tag)
-  res = requests.get(f"https://api.clashofclans.com/v1/players/{encoded_player_tag}", headers={"Authorization": f"Bearer {COC_API_TOKEN}"})
-
-  if not res.ok:
+  if not player_stats:
     await ctx.reply("""
 ❌ There was an error fetching the player stats.
 Some possible reasons:
@@ -125,16 +141,13 @@ Some possible reasons:
 - funky's IP address got blocked by SuperCell (RIP).
 """)
     return
+  
+  await send_long_text(ctx, f"""
+Oh wow, {ctx.author.mention}, like anyone else gives a damn about these stats. But sure, here’s your little ego boost anyway. Enjoy being the only one who cares 👋.
+Just a side note, this doesn't include builder base stats cause, who cares about the builder base anyway?
 
-  # TODO: There has to be a better way to do this.  
-  heroes = '\n'.join([f"- {hero['name']}: {hero['level']}/{hero['maxLevel']}" for hero in res.json()["heroes"]])
-
-  await ctx.send(f"""
-Hello {ctx.author.mention}! 👋. Here are some stats you may be interested in:
-
-**Hero Levels:**
-{heroes}
-  """)
+{player_stats}
+""")
 
 @bot.command()
 async def raid(ctx):
@@ -277,13 +290,9 @@ async def my_stats(ctx):
   if not player_tag:
     await ctx.reply("You don't have a player tag saved. Please use `!player_tag <tag>` to save one.")
 
-  if not player_tag.startswith("#"):
-    player_tag = f"#{player_tag}"
+  player_stats = coc.get_player_stats(player_tag)
 
-  encoded_player_tag = urllib.parse.quote(player_tag)
-  res = requests.get(f"https://api.clashofclans.com/v1/players/{encoded_player_tag}", headers={"Authorization": f"Bearer {COC_API_TOKEN}"})
-
-  if not res.ok:
+  if not player_stats:
     await ctx.reply("""
 ❌ There was an error fetching the player stats.
 Some possible reasons:
@@ -292,15 +301,12 @@ Some possible reasons:
 """)
     return
 
-  # TODO: There has to be a better way to do this.  
-  heroes = '\n'.join([f"- {hero['name']}: {hero['level']}/{hero['maxLevel']}" for hero in res.json()["heroes"]])
+  await send_long_text(ctx, f"""
+Oh wow, {ctx.author.mention}, like anyone else gives a damn about these stats. But sure, here’s your little ego boost anyway. Enjoy being the only one who cares 👋.
+Just a side note, this doesn't include builder base stats cause, who cares about the builder base anyway?
 
-  await ctx.send(f"""
-Hello {ctx.author.mention}! 👋. Here are some stats you may be interested in:
-
-**Hero Levels:**
-{heroes}
-  """)
+{player_stats}
+""")
 
 @bot.command()
 async def me(ctx):
